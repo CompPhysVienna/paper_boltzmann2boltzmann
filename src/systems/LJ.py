@@ -60,7 +60,7 @@ class lennard_jones(base_system):
         self.box_length = torch.from_numpy((s*L).astype(np.float32)).to(self.device) # reduced units
         self.volume = self.box_length.prod().cpu().numpy()
         
-        assert np.abs(self.rho - self.n_particles/self.volume) < tol, f"Error in computing box length from density: rho = {self.rho}, N/V = {self.n_particles/self.volume}"
+        assert np.abs(self.rho - self.n_particles/self.volume) < np.sqrt(tol), f"Error in computing box length from density: rho = {self.rho}, N/V = {self.n_particles/self.volume}"
         min_box_dimension = min(self.box_length.cpu().numpy())
 
         # Setting cutoff for interactions and correcting for it when not wca
@@ -99,7 +99,6 @@ class lennard_jones(base_system):
 
         # Tolerance to avoid numerical instabilities when backpropagating through the model
         self.tol = tol
-        self.tol_sq = tol**2
 
         # Set initial condition to None
         self.x0 = None
@@ -125,15 +124,15 @@ class lennard_jones(base_system):
         # Apply periodic boundary conditions
         rij -= self.box_length*torch.round(rij/self.box_length)    
         # Compute square distances between particles
-        r2 = torch.clamp(torch.sum(rij**2, dim=-1), min=self.tol_sq).unsqueeze(-1)                  
-        r6 = r2**3
-        r12 = r6**2
+        r2 = torch.clamp(torch.sum(rij**2, dim=-1), min=self.tol).unsqueeze(-1)                  
+        r6 = torch.clamp(r2**3, min=self.tol)
+        r12 = torch.clamp(r6**2, min=self.tol)
 
         # Compute Lennard-Jones potential energy
         lj_energy = 4 * self.epsilon * ( (self.sigma)**(12)/r12 - (self.sigma)**(6)/r6 ) - self.ecutoff
 
         # Evaluate condition for applying cutoff and avoiding self interactions
-        cond_cutoff = (r2 < self.cutoff_sq) & (r2 > self.tol_sq)
+        cond_cutoff = (r2 < self.cutoff_sq) & (r2 > self.tol)
         # Compute partial energies and zero when outside cutoff and when same particle 
         e_part = torch.where(cond_cutoff, lj_energy, torch.zeros(lj_energy.shape, device=self.device)) 
 
