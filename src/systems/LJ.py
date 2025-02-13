@@ -7,7 +7,7 @@ from systems.base import base_system
 
 class lennard_jones(base_system):
 
-    def __init__(self, n_particles, dimensions, rho, device, lattice_type="FCC", epsilon = 1, sigma = 1, cutoff = None, cutin = None, lrc = True, tol = 1.e-6):
+    def __init__(self, n_particles, dimensions, rho, device, lattice_type="FCC", epsilon = 1, sigma = 1, cutoff = None, cutin = None, lrc = True, tol = 1.e-8):
         super(lennard_jones, self).__init__(n_particles, dimensions, device)
         """
         Initializes the model function with parameters.
